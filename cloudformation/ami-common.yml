@@ -1,0 +1,115 @@
+Parameters:
+  PipelineCommonStack:
+    Type: String
+    Description: Name of CloudFormation Stack that contains common elements used in CodePipelines
+
+Resources:
+  IamRoleCodeBuildAmiBuild:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - !Ref IamPolicyCodeBuildGeneric
+        - !Ref IamPolicyCodeBuildGenericAmiBuild
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+
+  IamPolicyCodeBuildGeneric:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodeBuild to access assets and perform logging
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Logging
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*"
+
+          - Sid: CodePipelineS3Bucket
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource:
+              Fn::Join:
+                - ""
+                -
+                  - Fn::ImportValue:
+                      Fn::Sub: "${PipelineCommonStack}-S3ArtifactBucketArn"
+                  - "*"
+
+  IamPolicyCodeBuildGenericAmiBuild:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodeBuild to launch EC2 Instances, and create AMIs from them.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PackerGeneric
+            Effect: Allow
+            Action:
+              - ec2:AttachVolume
+              - ec2:AuthorizeSecurityGroupIngress
+              - ec2:CopyImage
+              - ec2:CreateImage
+              - ec2:CreateKeypair
+              - ec2:CreateSecurityGroup
+              - ec2:CreateSnapshot
+              - ec2:CreateTags
+              - ec2:CreateVolume
+              - ec2:DeleteKeyPair
+              - ec2:DeleteSecurityGroup
+              - ec2:DeleteSnapshot
+              - ec2:DeleteVolume
+              - ec2:DeregisterImage
+              - ec2:DescribeImageAttribute
+              - ec2:DescribeImages
+              - ec2:DescribeInstances
+              - ec2:DescribeRegions
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeSnapshots
+              - ec2:DescribeSubnets
+              - ec2:DescribeTags
+              - ec2:DescribeVolumes
+              - ec2:DetachVolume
+              - ec2:GetPasswordData
+              - ec2:ModifyImageAttribute
+              - ec2:ModifyInstanceAttribute
+              - ec2:ModifySnapshotAttribute
+              - ec2:RegisterImage
+              - ec2:RunInstances
+              - ec2:StopInstances
+              - ec2:TerminateInstances
+            Resource: "*"
+
+          - Sid: PackerSpotInstance
+            Effect: Allow
+            Action:
+              - ec2:RequestSpotInstances
+              - ec2:DescribeSpotInstanceRequests
+              - ec2:DescribeSpotPriceHistory
+              - ec2:CancelSpotInstanceRequests
+            Resource: "*"
+
+  ServiceRoleSpotInstances:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: spot.amazonaws.com
+
+Outputs:
+  IamRoleCodeBuildAmiBuild:
+    Description: CodeBuild role to build AMIs
+    Value: !GetAtt IamRoleCodeBuildAmiBuild.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AmiBuild'

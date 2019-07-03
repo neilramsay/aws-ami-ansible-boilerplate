@@ -1,0 +1,80 @@
+{
+    "variables": {
+        "aws_region": "{{env `AWS_REGION`}}",
+        "aws_ami_name": "boiler_{{isotime \"2006-01-02_0304\"}}",
+        "aws_ami_description": "Boiler",
+        "aws_codebuild_execution": "{{env `CODEBUILD_BUILD_ARN`}}",
+        "aws_codebuild_version": "{{env `CODEBUILD_RESOLVED_SOURCE_VERSION`}}",
+        "scm_commit_id": "{{env `CODEBUILD_RESOLVED_SOURCE_VERSION`}}",
+        "ansible_playbook": "ansible/boiler.yaml"
+    },
+
+    "builders": [{
+        "type": "amazon-ebs",
+        "region": "{{user `aws_region`}}",
+        
+        "instance_type": "t2.small",
+        "ebs_optimized": "false",
+        "associate_public_ip_address": "true",
+        
+        "ssh_username": "{{user `ssh_username`}}",
+        "source_ami_filter": {
+            "filters": {
+                "virtualization-type": "hvm",
+                "name": "{{user `source_ami_name`}}",
+                "root-device-type": "ebs"
+            },
+            "owners": "{{user `source_ami_accountid`}}",
+            "most_recent": true
+        },
+
+        "launch_block_device_mappings": [
+            {
+                "device_name": "/dev/sda1",
+                "volume_size": "8",
+                "volume_type": "gp2",
+                "delete_on_termination": true
+            }
+        ],
+        
+        "run_tags": {
+            "Environment": "dev",
+            "backup:class": "cattle"
+        },
+        "run_volume_tags": {
+            "Environment": "dev",
+            "backup:class": "cattle"
+        },
+
+        "ami_name": "{{user `aws_ami_name`}}",
+        "ami_description": "{{user `aws_ami_description`}}",
+        "tags": {
+            "Name": "{{user `aws_ami_name`}}",
+            "Created By": "Packer",
+            "codebuild:execution": "{{user `aws_codebuild_execution`}}",
+            "codebuild:version": "{{user `aws_codebuild_version`}}",
+            "scm:commitId": "{{user `scm_commit_id`}}"
+        }
+    }],
+
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [
+                "cloud-init status --wait",
+                "sudo cloud-init clean --logs"
+            ]
+        },
+        {
+            "type": "ansible",
+            "playbook_file": "{{user `ansible_playbook`}}",
+            "user": "{{user `ssh_username`}}"
+        }
+    ],
+
+    "post-processors": [
+        {
+            "type": "manifest"
+        }
+    ]
+}

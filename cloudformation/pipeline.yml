@@ -1,0 +1,97 @@
+Description: Deploy a CodePipeline and CodeBuild to create a Gold Image pipeline
+
+Parameters:
+  PipelineCommonStack:
+    Type: String
+    Description: Name of CloudFormation Stack that contains common elements used in CodePipelines
+  AmiCommonStack:
+    Type: String
+    Description: Name of CloudFormation Stack that contains common elements used in AMI Building
+  GitRepo:
+    Type: String
+    Description: GitHub repository to fetch code from (user/repo format)
+    AllowedPattern: "[a-zA-Z0-9-_.]+/[a-zA-Z0-9-_.]+"
+  GitBranch:
+    Type: String
+    Description: Git branch to build from - typically master
+    Default: master
+  GitOAuthToken:
+    Type: String
+    Description: OAuth token to allow CodePipeline access to GitHub
+    NoEcho: True
+
+Resources:
+  CodeBuildAmi:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:1.0
+        Type: LINUX_CONTAINER
+      # Name: String
+      ServiceRole:
+        Fn::ImportValue:
+          Fn::Sub: "${AmiCommonStack}-AmiBuild"
+      Source:
+        Type: CODEPIPELINE
+      # Tags:
+      #   - Tag
+
+  PipelineAmi:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location:
+          Fn::ImportValue:
+            Fn::Sub: "${PipelineCommonStack}-S3ArtifactBucket"
+      RoleArn:
+        Fn::ImportValue:
+          Fn::Sub: "${PipelineCommonStack}-Base"
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: GitHub
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner:
+                  Fn::Select:
+                    - 0
+                    - Fn::Split:
+                        - "/"
+                        - !Ref GitRepo
+                Repo:
+                  Fn::Select:
+                    - 1
+                    - Fn::Split:
+                      - "/"
+                      - !Ref GitRepo
+                Branch: !Ref GitBranch
+                OAuthToken: !Ref GitOAuthToken
+              OutputArtifacts:
+                - Name: Source
+
+        - Name: Build
+          Actions:
+            - Name: CodeBuild
+              RoleArn:
+                Fn::ImportValue:
+                  Fn::Sub: "${PipelineCommonStack}-CodeBuild"
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                ProjectName: !Ref CodeBuildAmi
+              InputArtifacts:
+                - Name: Source
+              OutputArtifacts:
+                - Name: AMIs
+

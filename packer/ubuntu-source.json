@@ -1,0 +1,5 @@
+{
+    "ssh_username": "ubuntu",
+    "source_ami_name": "ubuntu/images/hvm-ssd/*ubuntu-xenial-16.04-amd64-server-*",
+    "source_ami_accountid": "099720109477"
+}

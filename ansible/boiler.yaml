@@ -1,0 +1,18 @@
+---
+  # Ansible needs Python to run playbook commands.
+  # Send some raw shell commands to install Python if necessary.
+- name: Provision Python
+  hosts: all
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Boostrap python
+      raw: test -e /usr/bin/python || (apt-get -y update && apt-get install -y python-minimal)
+
+- hosts: all
+  become: yes
+  tasks:
+    - include_role:
+        name: users
+    - include_role:
+        name: snmp

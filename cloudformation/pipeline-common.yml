@@ -1,0 +1,245 @@
+Description: Common Elements used in CodePipelines, such as IAM Roles, and S3 artifact stores
+Resources:
+  iamRoleCodePipelineBase:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            Service: codepipeline.amazonaws.com
+      ManagedPolicyArns:
+        - !Ref iamPolicyCodePipelinePassRoleToService
+        - !Ref iamPolicyCodePipelineArtifactManagement
+
+  iamRoleCodePipelineCodeBuild:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !GetAtt iamRoleCodePipelineBase.Arn
+      ManagedPolicyArns:
+        - !Ref iamPolicyCodePipelinePassRoleToService
+        - !Ref iamPolicyCodePipelineCodeBuild
+
+  iamRoleCodePipelineCodeCommit:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !GetAtt iamRoleCodePipelineBase.Arn
+      ManagedPolicyArns:
+        - !Ref iamPolicyCodePipelineCodeCommit
+
+  iamRoleCodePipelineCodeDeploy:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !GetAtt iamRoleCodePipelineBase.Arn
+      ManagedPolicyArns:
+        # - !Ref iamPolicyCodePipelinePassRoleToService
+        - !Ref iamPolicyCodePipelineCodeDeploy
+
+  iamRoleCodePipelineLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !GetAtt iamRoleCodePipelineBase.Arn
+      ManagedPolicyArns:
+        # - !Ref iamPolicyCodePipelinePassRoleToService
+        - !Ref iamPolicyCodePipelineLambda
+
+  iamRoleCodePipelineCloudFormation:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !GetAtt iamRoleCodePipelineBase.Arn
+      ManagedPolicyArns:
+        - !Ref iamPolicyCodePipelineCloudFormation
+
+  iamPolicyCodePipelinePassRoleToService:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline core functions
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - iam:PassRole
+            Resource: '*'
+            Effect: Allow
+
+  iamPolicyCodePipelineArtifactManagement:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline to Execute CodeBuild
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: CodePipelineS3Bucket
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetBucketVersioning
+              - s3:PutObject
+            Resource: !Sub "${s3BucketCodePipelineArtifacts.Arn}*"
+
+  iamPolicyCodePipelineCodeBuild:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline execute a CodeBuild job
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+            Resource: '*'
+            Effect: Allow
+
+  iamPolicyCodePipelineCodeCommit:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline to pull/push CodeCommit
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - codecommit:CancelUploadArchive
+              - codecommit:GetBranch
+              - codecommit:GetCommit
+              - codecommit:GetUploadArchiveStatus
+              - codecommit:UploadArchive
+            Resource: '*'
+            Effect: Allow
+
+  iamPolicyCodePipelineCodeDeploy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline to perform a CodeDeploy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - codedeploy:CreateDeployment
+              - codedeploy:GetApplicationRevision
+              - codedeploy:GetDeployment
+              - codedeploy:GetDeploymentConfig
+              - codedeploy:RegisterApplicationRevision
+            Resource: '*'
+            Effect: Allow
+
+  iamPolicyCodePipelineLambda:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline to invoke a Lambda function
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - lambda:InvokeFunction
+              - lambda:ListFunctions
+            Resource: '*'
+            Effect: Allow
+
+  iamPolicyCodePipelineCloudFormation:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow CodePipeline to invoke CloudFormation
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+            Resource: '*'
+            Effect: Allow
+
+  s3BucketCodePipelineArtifacts:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub 'codepipeline-${AWS::Region}-${AWS::AccountId}'
+
+Outputs:
+  BaseRole:
+    Description: CodePipeline Base execution role
+    Value: !GetAtt iamRoleCodePipelineBase.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-Base'
+
+  CodeBuildRole:
+    Description: CodePipeline CodeBuild execution role
+    Value: !GetAtt iamRoleCodePipelineCodeBuild.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CodeBuild'
+
+  CodeCommitRole:
+    Description: CodePipeline CodeCommit execution role
+    Value: !GetAtt iamRoleCodePipelineCodeCommit.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CodeCommit'
+
+  CodeDeployRole:
+    Description: CodePipeline CodeDeploy execution role
+    Value: !GetAtt iamRoleCodePipelineCodeDeploy.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CodeDeploy'
+
+  LambdaRole:
+    Description: CodePipeline Lambda execution role
+    Value: !GetAtt iamRoleCodePipelineLambda.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-Lambda'
+
+  CloudFormationRole:
+    Description: CodePipeline CloudFormation execution role
+    Value: !GetAtt iamRoleCodePipelineCloudFormation.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFormation'
+
+  ArtifactS3Bucket:
+    Description: S3 Bucket for storing artifacts
+    Value: !Ref s3BucketCodePipelineArtifacts
+    Export:
+      Name: !Sub '${AWS::StackName}-S3ArtifactBucket'
+  ArtifactS3BucketArn:
+    Description: S3 Bucket for storing artifacts
+    Value: !GetAtt s3BucketCodePipelineArtifacts.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-S3ArtifactBucketArn'

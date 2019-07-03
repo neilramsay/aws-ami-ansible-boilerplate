@@ -1,0 +1,16 @@
+---
+- name: Install SNMP
+  apt:
+    name: snmpd
+- name: Copy SNMP configuration
+  copy:
+    src: snmpd.conf
+    dest: "/etc/snmp/snmpd.conf"
+    owner: root
+    group: root
+    mode: 0640
+- name: Restart SNMP Service
+  service:
+    name: snmpd
+    enabled: yes
+    state: restarted

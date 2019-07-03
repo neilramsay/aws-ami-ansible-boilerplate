@@ -1,0 +1,30 @@
+---
+- name: Create Consegna Group
+  group:
+    name: consegna
+
+- name: Consegna Sudo Users
+  copy:
+    dest: /etc/sudoers.d/consegna
+    content: |
+      ## Allows people in group wheel to run all commands without password
+      %consegna        ALL=(ALL)       NOPASSWD: ALL
+
+- name: Add Consegna Users
+  user:
+    name: "{{ item.name }}"
+    comment: "{{ item.comment }}"
+    shell: /bin/bash
+    append: yes
+    groups: consegna
+  with_items:
+    - name: ramsayn
+      comment: Neil Ramsay <neil.ramsay@consegna.cloud>
+
+- name: Add Authorised Keys
+  authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ item.key }}"
+  with_items:
+    - user: ramsayn
+      key: https://github.com/neilramsay.keys

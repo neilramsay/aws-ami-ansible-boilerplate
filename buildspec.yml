@@ -1,0 +1,31 @@
+---
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Installing HashiCorp Packer..."
+      - curl -qL -o packer.zip https://releases.hashicorp.com/packer/1.4.0/packer_1.4.0_linux_amd64.zip &&
+        unzip packer.zip -d /tmp/ &&
+        install -m 755 -o root -g root /tmp/packer /usr/local/bin/ &&
+        command -v packer
+      - echo "Installing Ansible"
+      - test -e /usr/bin/apt-add-repository ||
+        (apt-get update &&
+        apt-get install --yes software-properties-common)
+      - apt-add-repository --yes ppa:ansible/ansible &&
+        apt-get update &&
+        apt-get install --yes ansible
+      - echo "Validating packer-template.json"
+      - packer validate -var-file=packer/ubuntu-source.json packer/boiler.json
+  build:
+    commands:
+      - echo "Building HashiCorp Packer template, packer-template.json"
+      - packer build -color=false -var-file=packer/ubuntu-source.json packer/boiler.json
+  post_build:
+    commands:
+      - echo "HashiCorp Packer build completed on `date`"
+
+artifacts:
+  files:
+    - packer-manifest.json
