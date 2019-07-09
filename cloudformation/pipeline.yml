@@ -19,6 +19,22 @@ Parameters:
     Type: String
     Description: OAuth token to allow CodePipeline access to GitHub
     NoEcho: True
+    AllowedPattern: "[a-z0-9]{40}"
+
+Metadata:
+    AWS::CloudFormation::Interface:
+      ParameterGroups:
+        - Label:
+            default: Common CloudFormation Stacks
+          Parameters:
+            - PipelineCommonStack
+            - AmiCommonStack
+        - Label:
+            default: GitHub
+          Parameters:
+            - GitRepo
+            - GitBranch
+            - GitOAuthToken
 
 Resources:
   CodeBuildAmi:
