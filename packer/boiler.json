@@ -12,11 +12,13 @@
     "builders": [{
         "type": "amazon-ebs",
         "region": "{{user `aws_region`}}",
-        
+
         "instance_type": "t2.small",
         "ebs_optimized": "false",
+        "spot_price": "auto",
+        "spot_price_auto_product": "Linux/UNIX (Amazon VPC)",
         "associate_public_ip_address": "true",
-        
+
         "ssh_username": "{{user `ssh_username`}}",
         "source_ami_filter": {
             "filters": {
@@ -36,7 +38,7 @@
                 "delete_on_termination": true
             }
         ],
-        
+
         "run_tags": {
             "Environment": "dev",
             "backup:class": "cattle"

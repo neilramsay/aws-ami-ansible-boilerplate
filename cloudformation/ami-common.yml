@@ -100,12 +100,20 @@ Resources:
               - ec2:DescribeSpotInstanceRequests
               - ec2:DescribeSpotPriceHistory
               - ec2:CancelSpotInstanceRequests
+              - ec2:CreateLaunchTemplate
+              - ec2:DeleteLaunchTemplate
+              - ec2:CreateFleet
+              - ec2:DescribeSpotPriceHistory
             Resource: "*"
 
   ServiceRoleSpotInstances:
     Type: AWS::IAM::ServiceLinkedRole
     Properties:
       AWSServiceName: spot.amazonaws.com
+  ServiceRoleSpotFleetInstances:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: spotfleet.amazonaws.com
 
 Outputs:
   IamRoleCodeBuildAmiBuild:
